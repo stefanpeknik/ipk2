@@ -61,4 +61,11 @@ int main(int argc, const char *argv[])
         fprintf(stderr, "Usage: %s -h <host> -p <port> -m <mode>\n", argv[0]);
         return 1;
     }
+
+    if (mode == "tcp")
+    {
+    }
+    else // mode == "udp"
+    {
+    }
 }
