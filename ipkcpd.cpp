@@ -10,20 +10,22 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include <signal.h>
+using namespace std;
 
 #define BUFSIZE 1024
 
+string Solve(string recieved);
 int main(int argc, const char *argv[])
 {
     const char *server_hostname;
     int port_number;
-    std::string mode;
+    string mode;
 
     /* 1. test vstupnich parametru: */
 
     for (int i = 1; i < argc; i++)
     {
-        std::string arg = argv[i];
+        string arg = argv[i];
 
         if (arg == "-h" && i + 1 < argc)
         {
@@ -31,12 +33,12 @@ int main(int argc, const char *argv[])
         }
         else if (arg == "-p" && i + 1 < argc)
         {
-            std::string port_str = argv[++i];
+            string port_str = argv[++i];
             char *p;
             port_number = strtol(port_str.c_str(), &p, 10);
             if (*p)
             {
-                std::cerr << "Invalid port number: " << port_str << std::endl;
+                cerr << "Invalid port number: " << port_str << endl;
                 return EXIT_FAILURE;
             }
         }
@@ -45,13 +47,13 @@ int main(int argc, const char *argv[])
             mode = argv[++i];
             if (mode != "tcp" && mode != "udp")
             {
-                std::cerr << "Invalid mode: " << mode << std::endl;
+                cerr << "Invalid mode: " << mode << endl;
                 return EXIT_FAILURE;
             }
         }
         else
         {
-            std::cerr << "Unknown argument: " << arg << std::endl;
+            cerr << "Unknown argument: " << arg << endl;
             return EXIT_FAILURE;
         }
     }
