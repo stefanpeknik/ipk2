@@ -148,5 +148,86 @@ int main(int argc, const char *argv[])
     }
     else // mode == "udp"
     {
+        char buf[BUFSIZE];
+        int server_socket, bytestx, bytesrx;
+        socklen_t clientlen;
+        struct sockaddr_in client_address, server_address;
+        int optval;
+        const char *hostaddrp;
+        struct hostent *hostp;
+
+        /* Vytvoreni soketu */
+        if ((server_socket = socket(AF_INET, SOCK_DGRAM, 0)) <= 0)
+        {
+            perror("ERROR: socket");
+            exit(EXIT_FAILURE);
+        }
+        /* potlaceni defaultniho chovani rezervace portu ukonceni aplikace */
+        optval = 1;
+        setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, (const void *)&optval, sizeof(int));
+
+        /* adresa serveru, potrebuje pro prirazeni pozadovaneho portu */
+        bzero((char *)&server_address, sizeof(server_address));
+        server_address.sin_family = AF_INET;
+        server_address.sin_port = htons((unsigned short)port_number);
+        if (inet_pton(AF_INET, server_hostname, &server_address.sin_addr) <= 0)
+        {
+            fprintf(stderr, "Invalid address: %s\n", server_hostname);
+            exit(1);
+        }
+
+        if (bind(server_socket, (struct sockaddr *)&server_address, sizeof(server_address)) < 0)
+        {
+            perror("ERROR: binding");
+            exit(EXIT_FAILURE);
+        }
+
+        while (1)
+        {
+            printf("INFO: Ready.\n");
+            /* prijeti odpovedi a jeji vypsani */
+            bzero(buf, BUFSIZE);
+            clientlen = sizeof(client_address);
+            bytesrx = recvfrom(server_socket, buf, BUFSIZE, 0, (struct sockaddr *)&client_address, &clientlen);
+            if (bytesrx < 0)
+                perror("ERROR: recvfrom:");
+
+            hostp = gethostbyaddr((const char *)&client_address.sin_addr.s_addr,
+                                  sizeof(client_address.sin_addr.s_addr), AF_INET);
+
+            hostaddrp = inet_ntoa(client_address.sin_addr);
+            printf("Message (%lu) from %s: %s\n", strlen(buf + 2), hostaddrp, buf + 2);
+
+            string output;
+            try
+            {
+                output = Solve(string(buf + 2, strlen(buf + 2))); // can throw runtime_error("Empty input string")
+                bzero(buf, BUFSIZE);
+                strcpy(buf + 3, output.c_str());
+                buf[0] = '\1';
+                buf[1] = '\0';
+                buf[2] = (char)output.length();
+                strcpy(buf + 3, output.c_str());
+            }
+            catch (const runtime_error &e)
+            {
+                output = e.what();
+                bzero(buf, BUFSIZE);
+                strcpy(buf + 3, output.c_str());
+                buf[0] = '\1';
+                buf[1] = '\1';
+                buf[2] = (char)output.length();
+                strcpy(buf + 3, output.c_str());
+            }
+            printf("out: %s\n", buf + 3);
+
+            /* odeslani zpravy zpet klientovi  */
+            bytestx = sendto(server_socket, buf, output.length() + 3, 0, (struct sockaddr *)&client_address, clientlen);
+            if (bytestx < 0)
+                perror("ERROR: sendto:");
+        }
+    }
+}
+
     }
 }
