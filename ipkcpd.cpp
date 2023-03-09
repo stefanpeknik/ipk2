@@ -66,6 +66,85 @@ int main(int argc, const char *argv[])
 
     if (mode == "tcp")
     {
+        int rc;
+        int welcome_socket;
+        struct sockaddr_in sa;
+        struct sockaddr_in sa_client;
+        char str[INET6_ADDRSTRLEN];
+
+        socklen_t sa_client_len = sizeof(sa_client);
+        if ((welcome_socket = socket(PF_INET, SOCK_STREAM, 0)) < 0)
+        {
+            perror("ERROR: socket");
+            exit(EXIT_FAILURE);
+        }
+
+        memset(&sa, 0, sizeof(sa));
+        sa.sin_family = AF_INET;
+        sa.sin_port = htons((unsigned short)port_number);
+        if (inet_pton(AF_INET, server_hostname, &sa.sin_addr) <= 0)
+        {
+            fprintf(stderr, "Invalid address: %s\n", server_hostname);
+            exit(1);
+        }
+
+        if ((rc = bind(welcome_socket, (struct sockaddr *)&sa, sizeof(sa))) < 0)
+        {
+            perror("ERROR: bind");
+            exit(EXIT_FAILURE);
+        }
+        if ((listen(welcome_socket, 1)) < 0)
+        {
+            perror("ERROR: listen");
+            exit(EXIT_FAILURE);
+        }
+
+        while (1)
+        {
+            int comm_socket = accept(welcome_socket, (struct sockaddr *)&sa_client, &sa_client_len);
+            if (comm_socket > 0)
+            {
+                if (inet_ntop(AF_INET6, &sa_client.sin_addr, str, sizeof(str)))
+                {
+                    printf("INFO: New connection:\n");
+                    printf("INFO: Client address is %s\n", str);
+                    printf("INFO: Client port is %d\n", ntohs(sa_client.sin_port));
+                }
+
+                char buf[BUFSIZE];
+                int res = 0;
+                for (;;)
+                {
+                    bzero(buf, BUFSIZE);
+                    res = recv(comm_socket, buf, BUFSIZE, 0);
+                    if (res <= 0)
+                        break;
+
+                    printf("recieved: %s", buf);
+
+                    string output;
+                    try
+                    {
+                        output = Solve(string(buf, strlen(buf))); // can throw runtime_error("Empty input string")
+                    }
+                    catch (const runtime_error &e)
+                    {
+                        output = e.what();
+                    }
+                    printf("out: %s\n", output.c_str());
+
+                    bzero(buf, BUFSIZE);
+                    strcpy(buf, "recieved");
+                    send(comm_socket, buf, strlen(buf), 0);
+                }
+            }
+            else
+            {
+                printf(".");
+            }
+            printf("Connection to %s closed\n", str);
+            close(comm_socket);
+        }
     }
     else // mode == "udp"
     {
