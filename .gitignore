@@ -32,3 +32,6 @@
 *.out
 *.app
 
+ipkcpd
+.vscode/settings.json
+.vscode/launch.json
