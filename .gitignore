@@ -35,3 +35,8 @@
 ipkcpd
 .vscode/settings.json
 .vscode/launch.json
+.vscode/tasks.json
+grammar
+ll-table.md
+test
+test.cpp
