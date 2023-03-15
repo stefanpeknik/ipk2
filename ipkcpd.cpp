@@ -43,6 +43,7 @@ typedef struct
     int value;
 } Token;
 
+int evaluatePrefix(string expr);
 
 // global variables for signal handler
 string mode;
@@ -120,29 +121,30 @@ int main(int argc, const char *argv[])
 
     if (mode == "tcp")
     {
+        char buf[BUFSIZE];
         int rc;
         int welcome_socket;
-        struct sockaddr_in sa;
-        struct sockaddr_in sa_client;
-        char str[INET6_ADDRSTRLEN];
+        socklen_t sa_client_len;
+        struct sockaddr_in server_address, sa_client;
+        char str[INET_ADDRSTRLEN];
 
-        socklen_t sa_client_len = sizeof(sa_client);
+        sa_client_len = sizeof(sa_client);
         if ((welcome_socket = socket(PF_INET, SOCK_STREAM, 0)) < 0)
         {
             perror("ERROR: socket");
             exit(EXIT_FAILURE);
         }
 
-        memset(&sa, 0, sizeof(sa));
-        sa.sin_family = AF_INET;
-        sa.sin_port = htons((unsigned short)port_number);
-        if (inet_pton(AF_INET, server_hostname, &sa.sin_addr) <= 0)
+        bzero((char *)&server_address, sizeof(server_address));
+        server_address.sin_family = AF_INET;
+        server_address.sin_port = htons((unsigned short)port_number);
+        if (inet_pton(AF_INET, server_hostname, &server_address.sin_addr) <= 0)
         {
             fprintf(stderr, "Invalid address: %s\n", server_hostname);
             exit(1);
         }
 
-        if ((rc = bind(welcome_socket, (struct sockaddr *)&sa, sizeof(sa))) < 0)
+        if ((rc = bind(welcome_socket, (struct sockaddr *)&server_address, sizeof(server_address))) < 0)
         {
             perror("ERROR: bind");
             exit(EXIT_FAILURE);
@@ -160,14 +162,18 @@ int main(int argc, const char *argv[])
             comm_socket = accept(welcome_socket, (struct sockaddr *)&sa_client, &sa_client_len);
             if (comm_socket > 0)
             {
-                if (inet_ntop(AF_INET6, &sa_client.sin_addr, str, sizeof(str)))
+                if (inet_ntop(AF_INET, &sa_client.sin_addr, str, sizeof(str)))
                 {
                     printf("INFO: New connection:\n");
                     printf("INFO: Client address is %s\n", str);
                     printf("INFO: Client port is %d\n", ntohs(sa_client.sin_port));
                 }
+                else
+                {
+                    perror("ERROR: inet_ntop");
+                    exit(EXIT_FAILURE);
+                }
 
-                char buf[BUFSIZE];
                 int res = 0;
                 for (;;)
                 {
@@ -223,7 +229,8 @@ int main(int argc, const char *argv[])
             }
             else
             {
-                printf(".");
+                perror("ERROR: accept");
+                exit(EXIT_FAILURE);
             }
             printf("Connection to %s closed\n", str);
             close(comm_socket);
@@ -232,9 +239,9 @@ int main(int argc, const char *argv[])
     else // mode == "udp"
     {
         char buf[BUFSIZE];
-        int server_socket, bytestx, bytesrx;
-        socklen_t clientlen;
-        struct sockaddr_in client_address, server_address;
+        int bytestx, bytesrx;
+        socklen_t sa_client_len;
+        struct sockaddr_in server_address, sa_client;
         int optval;
         const char *hostaddrp;
         struct hostent *hostp;
@@ -270,18 +277,21 @@ int main(int argc, const char *argv[])
             printf("INFO: Ready.\n");
             /* prijeti odpovedi a jeji vypsani */
             bzero(buf, BUFSIZE);
-            clientlen = sizeof(client_address);
-            bytesrx = recvfrom(server_socket, buf, BUFSIZE, 0, (struct sockaddr *)&client_address, &clientlen);
+            sa_client_len = sizeof(sa_client);
+            bytesrx = recvfrom(server_socket, buf, BUFSIZE, 0, (struct sockaddr *)&sa_client, &sa_client_len);
             if (bytesrx < 0)
-                perror("ERROR: recvfrom:");
+            {
+                perror("ERROR: recvfrom");
+                exit(EXIT_FAILURE);
+            }
 
-            hostp = gethostbyaddr((const char *)&client_address.sin_addr.s_addr,
-                                  sizeof(client_address.sin_addr.s_addr), AF_INET);
+            hostp = gethostbyaddr((const char *)&sa_client.sin_addr.s_addr,
+                                  sizeof(sa_client.sin_addr.s_addr), AF_INET);
 
-            hostaddrp = inet_ntoa(client_address.sin_addr);
+            hostaddrp = inet_ntoa(sa_client.sin_addr);
             printf("Message (%lu) from %s: %s\n", strlen(buf + 2), hostaddrp, buf + 2);
 
-            string exprsn = string(buf + 2, (int)buf + 1);
+            string exprsn = string(buf + 2, (size_t)(buf + 1));
             int result;
             string output;
             try
@@ -303,6 +313,7 @@ int main(int argc, const char *argv[])
                 perror("ERROR: sendto:");
         }
     }
+    return 0;
 }
 
 int evaluatePrefix(string expr)
