@@ -305,45 +305,6 @@ int main(int argc, const char *argv[])
     }
 }
 
-void PrintTokens(vector<Token> tokens)
-{
-    for (size_t i = 0; i < tokens.size(); i++)
-    {
-        switch (tokens[i].type)
-        {
-        case OPERATOR:
-            switch (tokens[i].op)
-            {
-            case ADD:
-                cout << "ADD" << endl;
-                break;
-            case SUB:
-                cout << "SUB" << endl;
-                break;
-            case MUL:
-                cout << "MUL" << endl;
-                break;
-            case DIV:
-                cout << "DIV" << endl;
-                break;
-            }
-            break;
-
-        case OPEN_PAREN:
-            cout << "OPEN_PAREN" << endl;
-            break;
-
-        case CLOSE_PAREN:
-            cout << "CLOSE_PAREN" << endl;
-            break;
-
-        case OPERAND:
-            cout << tokens[i].value << endl;
-            break;
-        }
-    }
-}
-
 int evaluatePrefix(string expr)
 {
     std::stack<int> s;
@@ -396,9 +357,6 @@ int evaluatePrefix(string expr)
             throw runtime_error(ss.str());
         }
     }
-
-    // print tokens
-    PrintTokens(tokens);
 
     // evaluate the expression
     stack<Token> st;
