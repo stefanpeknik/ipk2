@@ -127,6 +127,8 @@ int main(int argc, const char *argv[])
             exit(EXIT_FAILURE);
         }
 
+        bool greeted = false;
+
         while (1)
         {
             int comm_socket = accept(welcome_socket, (struct sockaddr *)&sa_client, &sa_client_len);
@@ -149,6 +151,29 @@ int main(int argc, const char *argv[])
                         break;
 
                     printf("recieved: %s", buf);
+
+                    if (!greeted)
+                    {
+                        if (strcmp(buf, "HELLO\n") != 0)
+                        {
+                            printf("ERROR: HELLO expected\n");
+                            close(comm_socket);
+                            break;
+                        }
+                        else
+                        {
+                            printf("INFO: HELLO recieved\n");
+                            send(comm_socket, "HELLO\n", 6, 0);
+                            greeted = true;
+                        }
+                    }
+
+                    if (strcmp(buf, "BYE\n") == 0)
+                    {
+                        printf("INFO: BYE recieved\n");
+                        send(comm_socket, "BYE\n", 4, 0);
+                        break;
+                    }
 
                     string exprsn = buf;
 
