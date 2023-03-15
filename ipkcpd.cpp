@@ -10,11 +10,39 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include <signal.h>
+#include <stack>
+#include <sstream>
+#include <vector>
+#include <iostream>
+#include <algorithm>
+
 using namespace std;
 
 #define BUFSIZE 1024
 
-string Solve(string recieved);
+enum TokenType
+{
+    OPERATOR,
+    OPEN_PAREN,
+    CLOSE_PAREN,
+    OPERAND
+};
+
+enum OpType
+{
+    ADD,
+    SUB,
+    MUL,
+    DIV
+};
+
+typedef struct
+{
+    TokenType type;
+    OpType op;
+    int value;
+} Token;
+
 int main(int argc, const char *argv[])
 {
     const char *server_hostname;
@@ -229,5 +257,196 @@ int main(int argc, const char *argv[])
     }
 }
 
+void PrintTokens(vector<Token> tokens)
+{
+    for (size_t i = 0; i < tokens.size(); i++)
+    {
+        switch (tokens[i].type)
+        {
+        case OPERATOR:
+            switch (tokens[i].op)
+            {
+            case ADD:
+                cout << "ADD" << endl;
+                break;
+            case SUB:
+                cout << "SUB" << endl;
+                break;
+            case MUL:
+                cout << "MUL" << endl;
+                break;
+            case DIV:
+                cout << "DIV" << endl;
+                break;
+            }
+            break;
+
+        case OPEN_PAREN:
+            cout << "OPEN_PAREN" << endl;
+            break;
+
+        case CLOSE_PAREN:
+            cout << "CLOSE_PAREN" << endl;
+            break;
+
+        case OPERAND:
+            cout << tokens[i].value << endl;
+            break;
+        }
     }
+}
+
+int evaluatePrefix(string expr)
+{
+    std::stack<int> s;
+
+    // Tokenize the expr
+    std::vector<Token> tokens;
+    for (size_t i = 0; i < expr.length(); i++)
+    {
+        // parenthesis
+        if (expr[i] == '(')
+            tokens.push_back((Token){.type = OPEN_PAREN});
+        else if (expr[i] == ')')
+            tokens.push_back((Token){.type = CLOSE_PAREN});
+        // operators
+        else if (expr[i] == '+')
+        {
+            tokens.push_back((Token){.type = OPERATOR, .op = ADD});
+        }
+        else if (expr[i] == '-')
+        {
+            tokens.push_back((Token){.type = OPERATOR, .op = SUB});
+        }
+        else if (expr[i] == '*')
+        {
+            tokens.push_back((Token){.type = OPERATOR, .op = MUL});
+        }
+        else if (expr[i] == '/')
+        {
+            tokens.push_back((Token){.type = OPERATOR, .op = DIV});
+        }
+        // operands
+        else if (isdigit(expr[i]))
+        {
+            string operand = "";
+            int j = i;
+            while (isdigit(expr[j]))
+            {
+                i = j;
+                operand.append(1, expr[j++]);
+            }
+            tokens.push_back((Token){.type = OPERAND, .value = stoi(operand)});
+        }
+        else if (isspace(expr[i]))
+        {
+        }
+        else
+        {
+            stringstream ss;
+            ss << "Invalid character: " << expr[i] << " at index " << i;
+            throw runtime_error(ss.str());
+        }
+    }
+
+    // print tokens
+    PrintTokens(tokens);
+
+    // evaluate the expression
+    stack<Token> st;
+    for (size_t i = 0; i < tokens.size(); i++)
+    {
+        if (tokens[i].type == OPEN_PAREN)
+        {
+            st.push(tokens[i]);
+        }
+        else if (tokens[i].type == OPERAND)
+        {
+            st.push(tokens[i]);
+        }
+        else if (tokens[i].type == OPERATOR)
+        {
+            st.push(tokens[i]);
+        }
+        else if (tokens[i].type == CLOSE_PAREN)
+        {
+            vector<Token> operands;
+            while (st.top().type != OPERATOR) // load operands
+            {
+                if (st.top().type != OPERAND) // cannot accept anything other than operands
+                {
+                    throw runtime_error("Invalid expression");
+                }
+                operands.push_back(st.top());
+                st.pop();
+            }
+
+            if (operands.size() < 2) // cannot accept less than 2 operands
+            {
+                throw runtime_error("Expression in parenthesis must have at least 2 operands");
+            }
+
+            Token op = st.top(); // load operator
+            st.pop();
+
+            if (st.empty() || st.top().type != OPEN_PAREN) // check if there is a matching open parenthesis after the operator
+            {
+                throw runtime_error("Missing open parenthesis");
+            }
+            st.pop(); // pop open parenthesis
+
+            // evaluate the expression
+            reverse(operands.begin(), operands.end()); // reverse the operands so that the first operand is at the top of the stack
+            int result;
+            switch (op.op)
+            {
+            case ADD:
+                result = operands[0].value + operands[1].value;
+                for (size_t i = 2; i < operands.size(); i++)
+                {
+                    result += operands[i].value;
+                }
+                st.push((Token){.type = OPERAND, .value = result});
+                break;
+
+            case SUB:
+                result = operands[0].value - operands[1].value;
+                for (size_t i = 2; i < operands.size(); i++)
+                {
+                    result -= operands[i].value;
+                }
+                st.push((Token){.type = OPERAND, .value = result});
+                break;
+
+            case MUL:
+                result = operands[0].value * operands[1].value;
+                for (size_t i = 2; i < operands.size(); i++)
+                {
+                    result *= operands[i].value;
+                }
+                st.push((Token){.type = OPERAND, .value = result});
+                break;
+
+            case DIV:
+                result = operands[0].value / operands[1].value;
+                for (size_t i = 2; i < operands.size(); i++)
+                {
+                    result /= operands[i].value;
+                }
+                st.push((Token){.type = OPERAND, .value = result});
+                break;
+            }
+        }
+        else
+        {
+            throw runtime_error("Unexpected error");
+        }
+    }
+
+    if (st.size() > 1 || st.top().type != OPERAND) // check if the stack has only one operand left
+    {
+        throw runtime_error("Invalid expression");
+    }
+
+    return st.top().value; // return expression result;
 }
