@@ -43,11 +43,34 @@ typedef struct
     int value;
 } Token;
 
+
+// global variables for signal handler
+string mode;
+int comm_socket;
+int server_socket;
+
+void signalHandler(int signum)
+{
+    if (mode == "tcp")
+    {
+        /* odeslani ukonceni spojeni */
+        send(comm_socket, "BYE\n", 4, 0);
+
+        /* ukonceni spojeni */
+        close(comm_socket);
+    }
+    else if (mode == "udp")
+    {
+        /* ukonceni spojeni */
+    }
+
+    exit(EXIT_SUCCESS);
+}
+
 int main(int argc, const char *argv[])
 {
     const char *server_hostname;
     int port_number;
-    string mode;
 
     /* 1. test vstupnich parametru: */
 
@@ -85,6 +108,9 @@ int main(int argc, const char *argv[])
             return EXIT_FAILURE;
         }
     }
+
+    /* Zachyceni ctrl-C */
+    signal(SIGINT, signalHandler);
 
     if (strcmp(server_hostname, "") == 0 || port_number == 0 || mode.empty())
     {
@@ -131,7 +157,7 @@ int main(int argc, const char *argv[])
 
         while (1)
         {
-            int comm_socket = accept(welcome_socket, (struct sockaddr *)&sa_client, &sa_client_len);
+            comm_socket = accept(welcome_socket, (struct sockaddr *)&sa_client, &sa_client_len);
             if (comm_socket > 0)
             {
                 if (inet_ntop(AF_INET6, &sa_client.sin_addr, str, sizeof(str)))
