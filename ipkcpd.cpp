@@ -150,19 +150,23 @@ int main(int argc, const char *argv[])
 
                     printf("recieved: %s", buf);
 
+                    string exprsn = buf;
+
+                    int result;
                     string output;
                     try
                     {
-                        output = Solve(string(buf, strlen(buf))); // can throw runtime_error("Empty input string")
+                        result = evaluatePrefix(exprsn);
+                        output = "RESULT " + to_string(result) + "\n";
                     }
                     catch (const runtime_error &e)
                     {
-                        output = e.what();
+                        output = string(e.what()) + "\n";
                     }
-                    printf("out: %s\n", output.c_str());
+                    printf("out: %s", output.c_str());
 
                     bzero(buf, BUFSIZE);
-                    strcpy(buf, "recieved");
+                    strcpy(buf, output.c_str());
                     send(comm_socket, buf, strlen(buf), 0);
                 }
             }
@@ -226,31 +230,24 @@ int main(int argc, const char *argv[])
             hostaddrp = inet_ntoa(client_address.sin_addr);
             printf("Message (%lu) from %s: %s\n", strlen(buf + 2), hostaddrp, buf + 2);
 
+            string exprsn = string(buf + 2, (int)buf + 1);
+            int result;
             string output;
             try
             {
-                output = Solve(string(buf + 2, strlen(buf + 2))); // can throw runtime_error("Empty input string")
-                bzero(buf, BUFSIZE);
-                strcpy(buf + 3, output.c_str());
-                buf[0] = '\1';
-                buf[1] = '\0';
-                buf[2] = (char)output.length();
-                strcpy(buf + 3, output.c_str());
+                result = evaluatePrefix(exprsn);
+                output = to_string(result);
             }
             catch (const runtime_error &e)
             {
                 output = e.what();
-                bzero(buf, BUFSIZE);
-                strcpy(buf + 3, output.c_str());
-                buf[0] = '\1';
-                buf[1] = '\1';
-                buf[2] = (char)output.length();
-                strcpy(buf + 3, output.c_str());
             }
+            strcpy(buf + 3, output.c_str());
+
             printf("out: %s\n", buf + 3);
 
             /* odeslani zpravy zpet klientovi  */
-            bytestx = sendto(server_socket, buf, output.length() + 3, 0, (struct sockaddr *)&client_address, clientlen);
+            bytestx = sendto(server_socket, buf, output.length() + 3, 0, (struct sockaddr *)&sa_client, sa_client_len);
             if (bytestx < 0)
                 perror("ERROR: sendto:");
         }
