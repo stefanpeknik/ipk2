@@ -189,6 +189,7 @@ int main(int argc, const char *argv[])
                         if (strcmp(buf, "HELLO\n") != 0)
                         {
                             printf("ERROR: HELLO expected\n");
+                            send(comm_socket, "BYE\n", 4, 0);
                             close(comm_socket);
                             break;
                         }
@@ -197,6 +198,7 @@ int main(int argc, const char *argv[])
                             printf("INFO: HELLO recieved\n");
                             send(comm_socket, "HELLO\n", 6, 0);
                             greeted = true;
+                            continue;
                         }
                     }
 
@@ -234,6 +236,7 @@ int main(int argc, const char *argv[])
             }
             printf("Connection to %s closed\n", str);
             close(comm_socket);
+            greeted = false;
         }
     }
     else // mode == "udp"
