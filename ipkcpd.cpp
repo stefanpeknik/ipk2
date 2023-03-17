@@ -52,6 +52,7 @@ int server_socket;
 
 void signalHandler(int signum)
 {
+    printf("INFO: Signal %d received, exiting...\n", signum);
     if (mode == "tcp")
     {
         /* odeslani ukonceni spojeni */
