@@ -215,7 +215,23 @@ int main(int argc, const char *argv[])
                         break;
                     }
 
-                    string exprsn = buf;
+                    string recieved = string(buf);
+                    string exprsn;
+                    // Find the first occurrence of any non-space character
+                    size_t pos = recieved.find_first_not_of(" ");
+
+                    // Check if the remaining string starts with "SOLVE"
+                    if (recieved.substr(pos).find("SOLVE") == 0)
+                    {
+                        // Store everything after "SOLVE" in new_str
+                        exprsn = recieved.substr(pos + 6);
+                    }
+                    else
+                    {
+                        printf("ERROR: SOLVE expected\n");
+                        send(comm_socket, "ERROR\n", 6, 0);
+                        continue;
+                    }
 
                     int result;
                     string output;
