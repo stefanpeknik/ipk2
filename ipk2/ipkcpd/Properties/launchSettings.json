@@ -1,0 +1,15 @@
+{
+  "profiles": {
+    "ipkcpd": {
+      "commandName": "Project"
+    },
+    "ipkcpd -h 127.0.0.1 -p 2023 -m udp": {
+      "commandName": "Project",
+      "commandLineArgs": "ipkcpd -h 127.0.0.1 -p 2023 -m udp"
+    },
+    "ipkcpd -h 127.0.0.1 -p 2023 -m tcp": {
+      "commandName": "Project",
+      "commandLineArgs": "ipkcpd -h 127.0.0.1 -p 2023 -m tcp"
+    }
+  }
+}
