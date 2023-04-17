@@ -21,3 +21,5 @@ obj/
 [Dd]esktop.ini
 *.log
 ipkcpd/ipkcpd/Properties/launchSettings.json
+ipkcpd
+ipkcpd.pdb
