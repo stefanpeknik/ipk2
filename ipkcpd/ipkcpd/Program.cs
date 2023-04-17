@@ -51,6 +51,8 @@ public static class Program
         rootCommand.SetHandler((host, port, mode) =>
         {
             _mode = mode;
+            // Set up the console handler for SIGINT signal
+            Console.CancelKeyPress += Console_CancelKeyPress;
 
             switch (mode)
             {
@@ -69,5 +71,25 @@ public static class Program
         }, hostOption, portOption, modeOption);
 
         return rootCommand.InvokeAsync(args).Result;
+    }
+
+    private static void Console_CancelKeyPress(object? sender, ConsoleCancelEventArgs e)
+    {
+        Console.WriteLine("Caught SIGINT.");
+
+        switch (_mode)
+        {
+            case Mode.Tcp:
+                Console.WriteLine("Disposing Tcp server and its connections.");
+                _tcpServer?.Dispose();
+                break;
+
+            case Mode.Udp:
+                Console.WriteLine("Disposing Udp server and its connections.");
+                _udpServer?.Dispose();
+                break;
+        }
+
+        Environment.Exit(0);
     }
 }
